@@ -14,7 +14,7 @@ const string WebCsvUrl = "https://people.sc.fsu.edu/~jburkardt/data/csv/oscar_ag
 
 
 // Read the CSV file from the web and remove quotes from values
-// The second parameter is a boolean that indicates if the first row is a header
+// The second parameter is a boolean that indicates if the first row is for headers
 // The third parameter is a function that will be applied to each cell value 
 // In this case, we are replacing the quotes with a space
 DataTable CsvTable = await CsvReader.ReadFromWeb(WebCsvUrl, true, (str) => str.Replace('"', ' '));
@@ -26,15 +26,15 @@ DataTable CsvTable = await CsvReader.ReadFromWeb(WebCsvUrl, true, (str) => str.R
 */
 
 
-// captureLogs parameter is optional and default value is false
+// CaptureChanges parameter is optional and default value is false
 // if you set the captureLogs to true, anytime anyvalue is changed in the table, it will be logged
 // You can access the logs using the ChangeLogs property
 CsvTable.CaptureChanges = true;
 
 
 //Remove quotes from headers
-foreach (var item in CsvTable.Columns)
-    item.Header = item.Header.Replace('"', ' ').Trim();
+foreach (var column in CsvTable.Columns)
+    column.Header = item.Header.Replace('"', ' ').Trim();
 
 // Print the table
 // you can also give a int as a parameter to define the number of rows to print
@@ -54,20 +54,19 @@ var Column = CsvTable["Age"];
 var YoungestActor = Column.GetCells().OrderBy(x => x.Value).FirstOrDefault();
 
 // The c "YoungestActor" is a DataCell object that contains the value and the related row
-// By default a ToString() method is implemented that returns the position of the c in the table,
-// Data type of the c and the value of the c
-Console.WriteLine($"\nCell ToString() {YoungestActor}");
+// By default a ToString() method is implemented that returns the position, data type and value of the cell in the table,
+Console.WriteLine($"\nCell ToString() : {YoungestActor}");
 
-// You can get the position of the c in the table using the Position property
+// You can get the position of the cell in the table using the Position property
 CellPosition Position = YoungestActor.Position;
 
-// You can get the value of the c using the Value property
-// Data type will be automatically converted to the correct type when you set the value of the c
+// You can get the value of the cell using the Value property
+// Data type will be automatically converted to the correct type when you set the value of the cell
 Type dataType = YoungestActor.CellDataType;
 Console.WriteLine($"\nCell Data Type {dataType}");
 
 
-// You can find the exact row of the c using the RelatedRow property
+// You can find the exact row of the cell using the RelatedRow property
 Console.WriteLine($"\nYoungest Actor in the data : {YoungestActor?.RelatedRow}");
 
 // You can also get the next row and the previous row if its exist
@@ -76,7 +75,7 @@ Console.WriteLine($"\nYoungest Actor in the data : {YoungestActor?.RelatedRow}")
 Console.WriteLine($"\nNext Row : {YoungestActor?.RelatedRow.Next()}");
 Console.WriteLine($"\nPrevious Row : {YoungestActor?.RelatedRow.Previous()}");
 
-// You can get the value the exact row using the Indexer
+// You can get the value of the exact row using the Indexer
 // Data entities ara related to each other
 Console.WriteLine($"\nMovie {YoungestActor.RelatedRow["Movie"].Value}");
 
@@ -128,7 +127,7 @@ foreach (var actor in ActorsWhoWonMoreThanOnceCells)
 
     Console.WriteLine(sBuilder);
 }
-// You can print the logs
+// You can print the change logs if you want
 Console.WriteLine("\n\n-Change Logs-\n\n");
 foreach (var log in CsvTable.ChangeLogs)
     Console.WriteLine(log);
@@ -139,7 +138,7 @@ CsvTable.SaveLogs("logs.txt");
 // Save the changes to the file
 CsvTable.SaveToFile("newfile.csv");
 
-// Save the changes to the file and override the existing file
+// You can save the changes to a new file or override the source file
 // But you can't save the changes to the web source so be sure to check the source before saving
 
 /*
