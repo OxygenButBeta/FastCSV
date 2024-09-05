@@ -9,3 +9,4 @@ Capture and Log Changes: Optionally log changes to the CSV data.
 Handle CSV Data: Easily extract and manipulate columns and rows.
 
 You can find detailed examples in the sample project. Simply add the FastCSV.dll file to your project and start using it.
+[sample project](https://github.com/OxygenButBeta/FastCSV/blob/main/FastCSV-SampleProject/Program.cs). Simply add the FastCSV.dll file to your project and start using it.
