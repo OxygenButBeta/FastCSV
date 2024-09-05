@@ -8,31 +8,38 @@ using o2.FastCSV;
 // for more information about the license of the data : https://people.sc.fsu.edu/~jburkardt/txt/gnu_lgpl.txt
 const string WebCsvUrl = "https://people.sc.fsu.edu/~jburkardt/data/csv/oscar_age_male.csv";
 
-// Create a new DataTable object
-// The parameter is a boolean that indicates if the logs will be captured
-// captureLogs parameter is optional and default value is false
-// if you set the captureLogs to true, anytime anyvalue is changed in the table, it will be logged
-// You can access the logs using the ChangeLogs property
-DataTable CsvTable = new(captureLogs: true);
+
+
+
+
 
 // Read the CSV file from the web and remove quotes from values
 // The second parameter is a boolean that indicates if the first row is a header
-// The third parameter is a function that will be applied to each c value 
+// The third parameter is a function that will be applied to each cell value 
 // In this case, we are replacing the quotes with a space
-await CsvTable.ReadFromWeb(WebCsvUrl, true, (str) => str.Replace('"', ' '));
+DataTable CsvTable = await CsvReader.ReadFromWeb(WebCsvUrl, true, (str) => str.Replace('"', ' '));
 
 /*  You can also read from a file
-         CsvTable.ReadFromFile("path/to/file.csv", true, (str) => str.Replace('"', ' '));
+         DataTable csv = CsvReader.ReadAllFromFile(@"G:\customers-100000.csv"); or 
+            DataTable csv = CsvReader.ReadAllFromFile(@"G:\customers-100000.csv", true); or
+            DataTable csv = CsvReader.ReadAllFromFile(@"G:\customers-100000.csv", true, (str) => str.Replace('"', ' '));
 */
+
+
+// captureLogs parameter is optional and default value is false
+// if you set the captureLogs to true, anytime anyvalue is changed in the table, it will be logged
+// You can access the logs using the ChangeLogs property
+CsvTable.CaptureChanges = true;
+
 
 //Remove quotes from headers
 foreach (var item in CsvTable.Columns)
     item.Header = item.Header.Replace('"', ' ').Trim();
 
-
-
 // Print the table
-CsvTable.PrintTable();
+// you can also give a int as a parameter to define the number of rows to print
+CsvTable.PrintTable(); // or CsvTable.PrintTable(10); to print the first 10 rows
+
 
 // Get the column "Age"
 var Column = CsvTable["Age"];
@@ -49,7 +56,7 @@ var YoungestActor = Column.GetCells().OrderBy(x => x.Value).FirstOrDefault();
 // The c "YoungestActor" is a DataCell object that contains the value and the related row
 // By default a ToString() method is implemented that returns the position of the c in the table,
 // Data type of the c and the value of the c
-Console.WriteLine($"Cell ToString() {YoungestActor}");
+Console.WriteLine($"\nCell ToString() {YoungestActor}");
 
 // You can get the position of the c in the table using the Position property
 CellPosition Position = YoungestActor.Position;
@@ -57,21 +64,21 @@ CellPosition Position = YoungestActor.Position;
 // You can get the value of the c using the Value property
 // Data type will be automatically converted to the correct type when you set the value of the c
 Type dataType = YoungestActor.CellDataType;
-Console.WriteLine($"Cell Data Type {dataType}");
+Console.WriteLine($"\nCell Data Type {dataType}");
 
 
 // You can find the exact row of the c using the RelatedRow property
-Console.WriteLine($"Youngest Actor in the data : {YoungestActor?.RelatedRow}");
+Console.WriteLine($"\nYoungest Actor in the data : {YoungestActor?.RelatedRow}");
 
 // You can also get the next row and the previous row if its exist
 // if the row is the first row, the Previous() method will cause an exception
 // if the row is the last row, the Next() method will cause an exception
-Console.WriteLine($"Next Row : {YoungestActor?.RelatedRow.Next()}");
-Console.WriteLine($"Previous Row : {YoungestActor?.RelatedRow.Previous()}");
+Console.WriteLine($"\nNext Row : {YoungestActor?.RelatedRow.Next()}");
+Console.WriteLine($"\nPrevious Row : {YoungestActor?.RelatedRow.Previous()}");
 
 // You can get the value the exact row using the Indexer
 // Data entities ara related to each other
-Console.WriteLine($"Movie {YoungestActor.RelatedRow["Movie"].Value}");
+Console.WriteLine($"\nMovie {YoungestActor.RelatedRow["Movie"].Value}");
 
 
 // List the names of the actors who won the Oscar before 2000
@@ -82,7 +89,7 @@ var YearColumn = CsvTable["Year"];
 // Get the cells that have a value less than 2000 using LINQ
 var WinnersBefore2000 = YearColumn.GetCells().Where(x => (int)x.Value < 2000).ToList();
 
-Console.WriteLine("List of the actors who won the Oscar before 2000");
+Console.WriteLine("\nList of the actors who won the Oscar before year 2000\n");
 foreach (var item in WinnersBefore2000)
     Console.WriteLine(item.RelatedRow);
 
@@ -107,22 +114,22 @@ var ActorsWhoWonMoreThanOnceCells = ActorCells
             .ToList();
 
 
-Console.WriteLine("-- Actors who won oscar more than one --");
+Console.WriteLine("\n-- Actors who won oscar more than one --\n");
 foreach (var actor in ActorsWhoWonMoreThanOnceCells)
 {
     var sBuilder = new System.Text.StringBuilder();
     var relatedRow = actor.RelatedRow;
 
     sBuilder.Append(relatedRow["Name"].Value);
-    sBuilder.Append("won the Oscar in");
+    sBuilder.Append("won the Oscar in ");
     sBuilder.Append(relatedRow["Year"].Value);
-    sBuilder.Append("With movie named");
+    sBuilder.Append(" With movie named");
     sBuilder.Append(relatedRow["Movie"].Value);
 
     Console.WriteLine(sBuilder);
 }
-
 // You can print the logs
+Console.WriteLine("\n\n-Change Logs-\n\n");
 foreach (var log in CsvTable.ChangeLogs)
     Console.WriteLine(log);
 
@@ -130,7 +137,7 @@ foreach (var log in CsvTable.ChangeLogs)
 CsvTable.SaveLogs("logs.txt");
 
 // Save the changes to the file
-CsvTable.SaveChanges("newfile.csv");
+CsvTable.SaveToFile("newfile.csv");
 
 // Save the changes to the file and override the existing file
 // But you can't save the changes to the web source so be sure to check the source before saving
@@ -142,7 +149,7 @@ CsvTable.SaveChanges("newfile.csv");
 */
 
 if (CsvTable._Source == DataTable.CsvSource.File)
-    CsvTable.SaveChangesAndOveride();
+    CsvTable.SaveChangesAndOverride();
 
 
 // Wait for the user to press a key

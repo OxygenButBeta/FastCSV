@@ -18,7 +18,7 @@ namespace o2.FastCSV
             set
             {
                 var oldHeader = _header;
-                if (ParentTable.CaptureLogs)
+                if (ParentTable.CaptureChanges)
                     if (_header != value)
                         ParentTable.ChangeLogs.Add($"Column header changed from '{oldHeader}' to '{value}'");
 

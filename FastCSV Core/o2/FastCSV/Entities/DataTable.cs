@@ -11,9 +11,11 @@ namespace o2.FastCSV
             Web,
             NotSet
         }
+
         // Fields
-        string _CsvPath;
-        bool _CsvLoaded;
+        internal string _CsvPath;
+        internal bool _CsvLoaded;
+        internal bool _CaptureChanges = false;
 
 
         //Indexers
@@ -42,57 +44,36 @@ namespace o2.FastCSV
         /// <param name="x">Row Index</param>
         /// <param name="y">Column Index</param>
         /// <returns></returns>
-        public DataCell this[int x, int y] => GetCellAt(x, y);
+        public DataCell this[int x, int y] => this.GetCellAt(x, y);
 
         // Properties
-        public CsvSource _Source { get; private set; } = CsvSource.NotSet;
+        public CsvSource _Source { get; internal set; } = CsvSource.NotSet;
         public string[] Headers => Columns.Select(x => x.Header).ToArray();
         public List<DataRow> Rows { get; private set; }
         public List<DataColumn> Columns { get; private set; }
         public bool CheckCellEqualityAsString { get; set; } = true;
-        public bool CaptureLogs { get; set; } = true;
-        public readonly List<string> ChangeLogs;
-        public DataTable(bool captureLogs = false)
+        public bool CaptureChanges
         {
-            if (CaptureLogs)
-                ChangeLogs = new List<string>();
+            get => _CaptureChanges;
+            set
+            {
+                _CaptureChanges = value;
 
-            CaptureLogs = captureLogs;
+                if (!_CaptureChanges)
+                    ChangeLogs = null;
+                else
+                    ChangeLogs = new List<string>();
+
+            }
         }
-
-
-        public DataCell FindValueInAnywhere(object value)
-        {
-            for (int i = 0; i < Rows.Count; i++)
-                for (int j = 0; j < Rows[i].Cells.Length; j++)
-                    if (GetCellAt(i, j).Equals(value))
-                        return Rows[i].Cells[j];
-
-            return null;
-        }
-        public IEnumerable<DataCell> FindValuesInAnywhere(object value)
-        {
-            List<DataCell> cells = new();
-
-            for (int _ = 0; _ < Columns.Count; _++)
-                cells.AddRange(Columns[_].FindValues(value));
-
-            return cells;
-        }
-        public IEnumerable<DataCell> GetAllFromColumn(int ColumnIndex)
-        {
-            if (!ColumnIndex.IsBetween(0, Headers.Length))
-                throw new IndexOutOfRangeException("The column index is out of range");
-
-            return Rows.Select(row => row.Cells[ColumnIndex]);
-        }
+        public List<string> ChangeLogs { get; private set; }
 
 
 
         // IO
-        private void ParseCsvString(string CsvAsString, bool FirstLineIsHeader, Func<string, string> ValueFilter)
+        internal void ParseCsvString(string lines, bool FirstLineIsHeader, Func<string, string> ValueFilter) => ParseCsvString(lines.Split('\n'), FirstLineIsHeader, ValueFilter);
+        internal void ParseCsvString(string[] lines, bool FirstLineIsHeader, Func<string, string> ValueFilter)
         {
-            string[] lines = CsvAsString.Split('\n');
             Columns = new List<DataColumn>();
             var headers = lines[0].Split(',');
 
@@ -108,10 +89,8 @@ namespace o2.FastCSV
             int count = 0;
 
 
-
             for (int i = StartIndex; i < lines.Length - 1; i++)
             {
-
                 string[] values = lines[i].Split(',');
                 if (values.Length != headers.Length)
                     continue;
@@ -130,86 +109,23 @@ namespace o2.FastCSV
 
             _CsvLoaded = true;
         }
-        public void ReadFromFile(string path, bool FirstLineIsHeader = true, Func<string, string> ValueFilter = null)
-        {
-            if (!File.Exists(path))
-                throw new FileNotFoundException("The file does not exist");
-
-            ParseCsvString(File.ReadAllText(path), FirstLineIsHeader, ValueFilter);
-            _CsvPath = path;
-            _Source = CsvSource.File;
-        }
-
-        // Web
-        public async Task ReadFromWeb(string Url, bool FirstLineIsHeader = true, Func<string, string> ValueFilter = null)
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                var response = await client.GetStringAsync(Url);
-                ParseCsvString(response, FirstLineIsHeader, ValueFilter);
-                _CsvLoaded = true;
-                _Source = CsvSource.Web;
-            }
-
-        }
-
-
-        // IO
-        public string SerializeAsCsv()
-        {
-            if (!_CsvLoaded)
-                throw new InvalidOperationException("The table has not been loaded from a file yet.");
-
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine(string.Join(",", Headers));
-
-            foreach (DataRow row in Rows)
-                sb.AppendLine(string.Join(",", row.Cells.Select(cell => cell.Value)));
-
-            return sb.ToString();
-        }
-        public void SaveChangesAndOveride()
+        public void SaveChangesAndOverride()
         {
             if (_Source == CsvSource.Web)
                 throw new InvalidOperationException("The table has been loaded from a web source, you can't save changes to it. use SaveChanges(str) instead.");
 
-            SaveChanges(_CsvPath);
-        }
-        public void SaveChanges(string path)
-        {
-            switch (_Source)
-            {
-                case CsvSource.NotSet:
-                    throw new InvalidOperationException("The table has not been loaded from a file yet.");
-            }
-
-            File.WriteAllText(path, SerializeAsCsv());
-            _CsvPath = path;
+            this.SaveToFile(_CsvPath);
         }
         public void SaveLogs(string path)
         {
-            if (!CaptureLogs)
+            if (!CaptureChanges)
                 throw new InvalidOperationException("The logs are not being captured");
 
             File.WriteAllLines(path, ChangeLogs);
         }
-        // Output
-        public void PrintTable(int PrintAmount = -1)
-        {
-            Console.WriteLine(string.Join(" | ", Headers));
-
-            int TotalRows = PrintAmount == -1 || PrintAmount > Rows.Count ? Rows.Count : PrintAmount;
-
-            for (int i = 0; i < TotalRows; i++)
-                Console.WriteLine(Rows[i]);
-        }
-
 
         // Experssions
-        public DataCell GetCellAt(CellPosition position) => GetCellAt(position.X, position.Y);
-        public DataCell GetCellAt(int x, int y) => Rows[x].Cells[y];
-        public void ReadFromFile(string path, Func<string, string> ValueFilter) => ReadFromFile(path, true, ValueFilter);
-        public void ReadFromFile(string path, bool FirstLineIsHeader) => ReadFromFile(path, FirstLineIsHeader, null);
+
         internal int GetHeaderIndex(string header) => Array.IndexOf(Headers, header);
     }
 }

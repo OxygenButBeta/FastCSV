@@ -17,7 +17,7 @@ namespace o2.FastCSV
                 string oldValue = ToString();
                 _value = value;
                 CellDataType = DefineType(value.ToString());
-                if (RelatedRow.ParentTable.CaptureLogs)
+                if (RelatedRow.ParentTable.CaptureChanges)
                     RelatedRow.ParentTable.ChangeLogs.Add($"{oldValue} has been changed to {ToString()}");
 
             }
@@ -81,7 +81,8 @@ namespace o2.FastCSV
         public override int GetHashCode() => base.GetHashCode();
         public override string ToString()
         {
-            return $"[Position= {Position}, Value= {Value}, Data Type= {CellDataType.ToString().Split('.')[1]}] ";
+            var typeAsString = CellDataType.ToString().Split('.');
+            return $"[{Position}, Value: {Value}, Data Type: {typeAsString[typeAsString.Length - 1]}]";
         }
     }
 }
